@@ -9,19 +9,25 @@ dt = 300
 fcor = 0.0001
 
 u_ana = np.zeros((nt_len))
+v_ana = np.zeros((nt_len))
 u = np.zeros((nt_len))
 v = np.zeros((nt_len))
 time = np.zeros((nt_len))
+KE = np.zeros((nt_len-1))
+V = np.zeros((nt_len-1))
+V_ana = np.zeros((nt_len-1))
+V_error = np.zeros((nt_len-1))
 
 u[0] = 10.0
-u_ana[0] = 10.0
+u_ana[0] = 10.0; v_ana[0] = 0.0
 
 methods = ['Euler-forward', 'Leap-frog', 'Matsuno', 'Heun']
-method = methods[3]
+method = methods[0]
 
 for nt in range(1, nt_len):
     time[nt] = time[nt-1] + dt
     u_ana[nt] = u_ana[0] * M.cos(fcor * time[nt])
+    v_ana[nt] = v_ana[0] * M.cos(fcor * time[nt])
     
     if method == 'Euler-forward':
         u[nt] = u[nt-1] + (fcor * v[nt-1] * dt)
@@ -48,7 +54,8 @@ for nt in range(1, nt_len):
         
         u[nt] = u[nt-1] + (0.5 * fcor * dt * (v[nt-1] + v_star))
         v[nt] = v[nt-1] - (0.5 * fcor * dt * (u[nt-1] + u_star))
-
+        
+    KE[nt-1] = 0.5 * (u[nt-1]**2 + v[nt-1]**2)
     
     
 #%%   
@@ -58,13 +65,17 @@ plt.plot(time/3600, u, color='black', label='numerical')
 plt.plot(time/3600, u_ana, color='red', label='analytical')
 plt.xlabel("time [hrs]", fontsize=15)
 plt.ylabel("u [m/s]", fontsize=15)
-plt.title(f"Intertial oscillation ({method})")
+plt.title(f"Intertial oscillation ({method}) [dt={dt}]")
 plt.legend(loc='upper left')
 plt.show()
 
 #%%
 ## kinetic energy
-
-#%%
-## velocity error
-
+plt.figure(figsize=(10,6))
+plt.plot(time[:-1]/3600, KE, color='black')
+plt.xlabel("time [hrs]", fontsize=15)
+plt.ylabel("KE $[m^2/s^2]$", fontsize=15)
+plt.title(f"Kinetic energy ({method} [dt={dt}])")
+plt.yticks(np.arange(np.min(KE), np.max(KE), 5))
+plt.grid()
+plt.show()

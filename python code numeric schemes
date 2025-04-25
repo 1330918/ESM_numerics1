@@ -1,0 +1,70 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import math as M
+
+#%%
+nt_len = 720
+dt = 300
+
+fcor = 0.0001
+
+u_ana = np.zeros((nt_len))
+u = np.zeros((nt_len))
+v = np.zeros((nt_len))
+time = np.zeros((nt_len))
+
+u[0] = 10.0
+u_ana[0] = 10.0
+
+methods = ['Euler-forward', 'Leap-frog', 'Matsuno', 'Heun']
+method = methods[3]
+
+for nt in range(1, nt_len):
+    time[nt] = time[nt-1] + dt
+    u_ana[nt] = u_ana[0] * M.cos(fcor * time[nt])
+    
+    if method == 'Euler-forward':
+        u[nt] = u[nt-1] + (fcor * v[nt-1] * dt)
+        v[nt] = v[nt-1] - (fcor * u[nt-1] * dt)
+    
+    elif method == 'Leap-frog':
+        if nt == 1:
+            u[nt] = u[nt-1] + (fcor * v[nt-1] * dt)
+            v[nt] = v[nt-1] - (fcor * u[nt-1] * dt)
+        else:
+            u[nt] = u[nt-2] + (2 * fcor * v[nt-1] * dt)
+            v[nt] = v[nt-2] - (2 * fcor * u[nt-1] * dt)
+    
+    elif method == 'Matsuno':
+        u_star = u[nt-1] + (fcor * v[nt-1] * dt)
+        v_star = v[nt-1] - (fcor * u[nt-1] * dt)
+        
+        u[nt] = u[nt-1] + (fcor * v_star * dt)
+        v[nt] = v[nt-1] - (fcor * u_star * dt)
+    
+    elif method == 'Heun':
+        u_star = u[nt-1] + (fcor * v[nt-1] * dt)
+        v_star = v[nt-1] - (fcor * u[nt-1] * dt)
+        
+        u[nt] = u[nt-1] + (0.5 * fcor * dt * (v[nt-1] + v_star))
+        v[nt] = v[nt-1] - (0.5 * fcor * dt * (u[nt-1] + u_star))
+
+    
+    
+#%%   
+## numerical vs analytical
+plt.figure(figsize=(7,6))
+plt.plot(time/3600, u, color='black', label='numerical')
+plt.plot(time/3600, u_ana, color='red', label='analytical')
+plt.xlabel("time [hrs]", fontsize=15)
+plt.ylabel("u [m/s]", fontsize=15)
+plt.title(f"Intertial oscillation ({method})")
+plt.legend(loc='upper left')
+plt.show()
+
+#%%
+## kinetic energy
+
+#%%
+## velocity error
+

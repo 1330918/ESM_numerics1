@@ -1,71 +1,88 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
 import math as M
 
 #%%
-nt_len = 720
-dt = 300
+# nt_len = 720
+# dt = 300
+dt_values = [10, 20, 50, 100, 200, 500, 1000]
+errors = []
 
 fcor = 0.0001
 
-u_ana = np.zeros((nt_len))
-v_ana = np.zeros((nt_len))
-u = np.zeros((nt_len))
-v = np.zeros((nt_len))
-time = np.zeros((nt_len))
-KE = np.zeros((nt_len-1))
-V = np.zeros((nt_len-1))
-V_ana = np.zeros((nt_len-1))
-V_error = np.zeros((nt_len-1))
-
-u[0] = 10.0
-u_ana[0] = 10.0; v_ana[0] = 0.0
-
 methods = ['Euler-forward', 'Leap-frog', 'Matsuno', 'Heun']
-method = methods[0]
+method = methods[1]
 
-for nt in range(1, nt_len):
-    time[nt] = time[nt-1] + dt
-    u_ana[nt] = u_ana[0] * M.cos(fcor * time[nt])
-    v_ana[nt] = v_ana[0] * M.cos(fcor * time[nt])
+results = {}
+
+for dt in dt_values:
+    final_time = 60*3600
+    nt_len = int(final_time / dt) + 1
+    time = np.linspace(0, final_time, nt_len)
     
-    if method == 'Euler-forward':
-        u[nt] = u[nt-1] + (fcor * v[nt-1] * dt)
-        v[nt] = v[nt-1] - (fcor * u[nt-1] * dt)
+    u_ana = np.zeros((nt_len))
+    v_ana = np.zeros((nt_len))
+    u = np.zeros((nt_len))
+    v = np.zeros((nt_len))
+    KE = np.zeros((nt_len-1))
     
-    elif method == 'Leap-frog':
-        if nt == 1:
+    u[0] = 10.0
+    u_ana[0] = 10.0
+    
+    for nt in range(1, nt_len):
+        u_ana[nt] = u_ana[0] * M.cos(fcor * time[nt])
+        v_ana[nt] = v_ana[0] * M.cos(fcor * time[nt])
+        
+        if method == 'Euler-forward':
             u[nt] = u[nt-1] + (fcor * v[nt-1] * dt)
             v[nt] = v[nt-1] - (fcor * u[nt-1] * dt)
-        else:
-            u[nt] = u[nt-2] + (2 * fcor * v[nt-1] * dt)
-            v[nt] = v[nt-2] - (2 * fcor * u[nt-1] * dt)
+        
+        elif method == 'Leap-frog':
+            if nt == 1:
+                u[nt] = u[nt-1] + (fcor * v[nt-1] * dt)
+                v[nt] = v[nt-1] - (fcor * u[nt-1] * dt)
+            else:
+                u[nt] = u[nt-2] + (2 * fcor * v[nt-1] * dt)
+                v[nt] = v[nt-2] - (2 * fcor * u[nt-1] * dt)
+        
+        elif method == 'Matsuno':
+            u_star = u[nt-1] + (fcor * v[nt-1] * dt)
+            v_star = v[nt-1] - (fcor * u[nt-1] * dt)
+            
+            u[nt] = u[nt-1] + (fcor * v_star * dt)
+            v[nt] = v[nt-1] - (fcor * u_star * dt)
+        
+        elif method == 'Heun':
+            u_star = u[nt-1] + (fcor * v[nt-1] * dt)
+            v_star = v[nt-1] - (fcor * u[nt-1] * dt)
+            
+            u[nt] = u[nt-1] + (0.5 * fcor * dt * (v[nt-1] + v_star))
+            v[nt] = v[nt-1] - (0.5 * fcor * dt * (u[nt-1] + u_star))
+        
+        KE[nt-1] = 0.5 * (u[nt-1]**2 + v[nt-1]**2)
     
-    elif method == 'Matsuno':
-        u_star = u[nt-1] + (fcor * v[nt-1] * dt)
-        v_star = v[nt-1] - (fcor * u[nt-1] * dt)
-        
-        u[nt] = u[nt-1] + (fcor * v_star * dt)
-        v[nt] = v[nt-1] - (fcor * u_star * dt)
+    results[dt] = {'u': u, 'v': v, 'time': time, 'KE': KE}
     
-    elif method == 'Heun':
-        u_star = u[nt-1] + (fcor * v[nt-1] * dt)
-        v_star = v[nt-1] - (fcor * u[nt-1] * dt)
-        
-        u[nt] = u[nt-1] + (0.5 * fcor * dt * (v[nt-1] + v_star))
-        v[nt] = v[nt-1] - (0.5 * fcor * dt * (u[nt-1] + u_star))
-        
-    KE[nt-1] = 0.5 * (u[nt-1]**2 + v[nt-1]**2)
+    V = np.sqrt(u[-1]**2 + v[-1]**2) # u[-1] for t=3600 s
+    V_ana = 10
+    error = abs(V - V_ana)
+    errors.append(error)
+    
     
     
 #%%   
 ## numerical vs analytical
-plt.figure(figsize=(7,6))
-plt.plot(time/3600, u, color='black', label='numerical')
+plt.figure(figsize=(10,6))
+dts = [50, 200, 1000]
+linestyles  = ['-', ':', '--']
+
+for i, t in enumerate(dts):
+    plt.plot(results[t]['time']/3600, results[t]['u'], color='black', linestyle=linestyles[i], label=f'numerical (dt={t})')
 plt.plot(time/3600, u_ana, color='red', label='analytical')
 plt.xlabel("time [hrs]", fontsize=15)
 plt.ylabel("u [m/s]", fontsize=15)
-plt.title(f"Intertial oscillation ({method}) [dt={dt}]")
+plt.title(f"Intertial oscillation ({method})")
 plt.legend(loc='upper left')
 plt.grid()
 plt.show()
@@ -73,9 +90,31 @@ plt.show()
 #%%
 ## kinetic energy
 plt.figure(figsize=(10,6))
-plt.plot(time[:-1]/3600, KE, color='black')
+dts = [50, 200, 1000]
+
+for i in dts:
+    plt.plot(results[i]['time'][:-1]/3600, results[i]['KE'], label=f'dt={i}')
+
 plt.xlabel("time [hrs]", fontsize=15)
 plt.ylabel("KE $[m^2/s^2]$", fontsize=15)
-plt.title(f"Kinetic energy ({method} [dt={dt}])")
+plt.title(f"Kinetic energy ({method})")
+plt.legend(loc='upper left')
 plt.grid()
 plt.show()
+
+#%%
+## velocity error
+plt.figure(figsize=(10,6))
+plt.scatter(dt_values, errors, color='black', label='numerical')
+plt.xlabel("$\Delta t \ [s]$", fontsize=15)
+plt.ylabel("error V [m/s]", fontsize=15)
+plt.title(f"Velocity error ({method})")
+plt.xscale('log')
+ax = plt.gca()
+# ax.xaxis.set_minor_formatter(mticker.ScalarFormatter())
+from matplotlib.ticker import StrMethodFormatter, NullFormatter
+ax.xaxis.set_major_formatter(StrMethodFormatter('{x:.0f}'))
+ax.xaxis.set_minor_formatter(NullFormatter())
+plt.grid()  
+plt.show()
+
